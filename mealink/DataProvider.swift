@@ -70,7 +70,12 @@ ingredient_id,
 quantity,
 unit,
 expires_at,
-updated_at
+updated_at,
+ingredients:ingredient_id(
+  name,
+  category,
+  unit
+)
 """
         let response = try await client
             .from("inventory")
@@ -109,6 +114,7 @@ private struct InventoryRow: Decodable {
     let unit: String?
     let expires_at: String?
     let updated_at: String?
+    let ingredients: IngredientRow?
 
     func toDomain() -> InventoryItem {
         let qtyLabel: String
@@ -123,16 +129,22 @@ private struct InventoryRow: Decodable {
 
         return InventoryItem(
             id: id ?? UUID(),
-            name: "食材ID: \(ingredient_id?.uuidString.prefix(8) ?? "unknown")",
+            name: ingredients?.name ?? "食材ID: \(ingredient_id?.uuidString.prefix(8) ?? "unknown")",
             quantityLabel: qtyLabel,
             fill: fill,
-            emoji: "🥫",
-            category: "その他",
+            emoji: emojiFor(category: ingredients?.category ?? "その他"),
+            category: ingredients?.category ?? "その他",
             alert: false,
             expiresAt: expires_at,
             location: nil
         )
     }
+}
+
+private struct IngredientRow: Decodable {
+    let name: String?
+    let category: String?
+    let unit: String?
 }
 
 // MARK: - Decode helper
@@ -143,5 +155,13 @@ private func decodeResponse<T: Decodable>(data: Data?) throws -> T {
         throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Empty response"))
     }
     return try decoder.decode(T.self, from: data)
+}
+
+private func emojiFor(category: String) -> String {
+    if category.contains("肉") { return "🍗" }
+    if category.contains("魚") { return "🐟" }
+    if category.contains("野菜") { return "🥕" }
+    if category.contains("果") { return "🍎" }
+    return "🥫"
 }
 #endif
