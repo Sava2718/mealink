@@ -2,60 +2,33 @@
 //  ContentView.swift
 //  mealink
 //
-//  Created by Tya NaWa on 2025/12/11.
-//
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    private let dataProvider: any DataProvider = MockDataProvider()
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
-        }
-    }
+        TabView {
+            TodayMenuView(dataProvider: dataProvider)
+                .tabItem { Label("今日の献立", systemImage: "fork.knife") }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
+            InventoryView(dataProvider: dataProvider)
+                .tabItem { Label("在庫", systemImage: "cabinet") }
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
+            RecordInputView()
+                .tabItem { Label("記録(入力)", systemImage: "doc.text.viewfinder") }
+
+            HealthLogView()
+                .tabItem { Label("記録(ログ)", systemImage: "chart.line.uptrend.xyaxis") }
+
+            MyPageView()
+                .tabItem { Label("マイページ", systemImage: "person.circle") }
         }
+        .tint(Color(hex: "#F3A16E"))
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
