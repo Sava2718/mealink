@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    private let dataProvider: any DataProvider = MockDataProvider()
+    private let dataProvider: any DataProvider = SupabaseProviderFactory.make() ?? MockDataProvider()
 
     var body: some View {
         TabView {
@@ -26,6 +26,11 @@ struct ContentView: View {
                 .tabItem { Label("マイページ", systemImage: "person.circle") }
         }
         .tint(Color(hex: "#F3A16E"))
+        .onAppear {
+#if DEBUG
+            print("[Supabase] moduleAvailable=\(SupabaseClients.shared.moduleAvailable), isConfigured=\(SupabaseClients.shared.isConfigured)")
+#endif
+        }
     }
 }
 
