@@ -4,6 +4,7 @@ struct TodayMenuView: View {
     let dataProvider: any DataProvider
 
     @State private var recipes: [Recipe] = []
+    @State private var selectedCuisine: String = "すべて"
     @State private var isLoading = true
     @State private var errorMessage: String?
 
@@ -17,8 +18,9 @@ struct TodayMenuView: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
-                        ForEach(["和食", "洋食", "中華", "エスニック", "その他"], id: \.self) { cat in
-                            CategoryChip(label: cat, selected: cat == "和食")
+                        ForEach(availableCuisines, id: \.self) { cat in
+                            CategoryChip(label: cat, selected: cat == selectedCuisine)
+                                .onTapGesture { selectedCuisine = cat }
                         }
                     }
                 }
@@ -28,7 +30,7 @@ struct TodayMenuView: View {
                 } else if let message = errorMessage {
                     ErrorCard(message: message, retry: load)
                 } else {
-                    ForEach(recipes) { recipe in
+                    ForEach(filteredRecipes) { recipe in
                         RecipeCard(recipe: recipe)
                     }
                 }
@@ -55,11 +57,23 @@ struct TodayMenuView: View {
         errorMessage = nil
         do {
             recipes = try await dataProvider.fetchRecipes()
+            if !availableCuisines.contains(selectedCuisine) { selectedCuisine = "すべて" }
             isLoading = false
         } catch {
             errorMessage = "レシピの取得に失敗しました。\n\(error.localizedDescription)"
             isLoading = false
         }
+    }
+
+    private var availableCuisines: [String] {
+        let cuisines = recipes.compactMap { $0.cuisine?.isEmpty == false ? $0.cuisine : nil }
+        let unique = Array(Set(cuisines)).sorted()
+        return ["すべて"] + unique
+    }
+
+    private var filteredRecipes: [Recipe] {
+        guard selectedCuisine != "すべて" else { return recipes }
+        return recipes.filter { $0.cuisine == selectedCuisine }
     }
 }
 

@@ -6,6 +6,7 @@ struct Recipe: Identifiable {
     let description: String?
     let cookTimeMin: Int?
     let servings: Int?
+    let cuisine: String?
     let ingredients: [RecipeIngredient]
     let imageURL: URL?
 
@@ -15,6 +16,7 @@ struct Recipe: Identifiable {
         description: String? = nil,
         cookTimeMin: Int? = nil,
         servings: Int? = nil,
+        cuisine: String? = nil,
         ingredients: [RecipeIngredient] = [],
         imageURL: URL? = nil
     ) {
@@ -23,6 +25,7 @@ struct Recipe: Identifiable {
         self.description = description
         self.cookTimeMin = cookTimeMin
         self.servings = servings
+        self.cuisine = cuisine
         self.ingredients = ingredients
         self.imageURL = imageURL
     }

@@ -14,6 +14,7 @@ final class MockDataProvider: DataProvider {
                 description: "彩り野菜と鶏肉をオーブンでじっくり焼いた一品。",
                 cookTimeMin: 15,
                 servings: 2,
+                cuisine: "洋食",
                 ingredients: [
                     RecipeIngredient(name: "鶏肉", amount: "200g"),
                     RecipeIngredient(name: "ズッキーニ", amount: "1本 不足", isAlert: true),
@@ -52,6 +53,7 @@ title,
 description,
 cook_time_min,
 servings,
+ cuisine,
 created_at
 """
         let response = try await client
@@ -92,6 +94,7 @@ private struct RecipeRow: Decodable {
     let description: String?
     let cook_time_min: Int?
     let servings: Int?
+    let cuisine: String?
     let created_at: String?
 
     func toDomain() -> Recipe {
@@ -101,6 +104,7 @@ private struct RecipeRow: Decodable {
             description: description,
             cookTimeMin: cook_time_min,
             servings: servings,
+            cuisine: cuisine,
             ingredients: [] // ingredients will be filled later when schema available
         )
     }
