@@ -2,7 +2,7 @@ import Foundation
 
 struct Recipe: Identifiable {
     let id: UUID
-    let title: String
+    let name: String
     let description: String?
     let cookTimeMin: Int?
     let servings: Int?
@@ -12,7 +12,7 @@ struct Recipe: Identifiable {
 
     init(
         id: UUID = UUID(),
-        title: String,
+        name: String,
         description: String? = nil,
         cookTimeMin: Int? = nil,
         servings: Int? = nil,
@@ -21,7 +21,7 @@ struct Recipe: Identifiable {
         imageURL: URL? = nil
     ) {
         self.id = id
-        self.title = title
+        self.name = name
         self.description = description
         self.cookTimeMin = cookTimeMin
         self.servings = servings

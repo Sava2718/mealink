@@ -91,7 +91,7 @@ struct RecipeCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(recipe.title)
+                Text(recipe.name)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Color(hex: "#3E4B50"))
 

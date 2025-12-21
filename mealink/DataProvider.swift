@@ -10,7 +10,7 @@ final class MockDataProvider: DataProvider {
     func fetchRecipes() async throws -> [Recipe] {
         [
             Recipe(
-                title: "鶏肉と野菜のパステルグリル",
+                name: "鶏肉と野菜のパステルグリル",
                 description: "彩り野菜と鶏肉をオーブンでじっくり焼いた一品。",
                 cookTimeMin: 15,
                 servings: 2,
@@ -49,7 +49,7 @@ final class SupabaseDataProvider: DataProvider {
     func fetchRecipes() async throws -> [Recipe] {
         let query = """
 id,
-title,
+name,
 description,
 cook_time_min,
 servings,
@@ -90,7 +90,7 @@ ingredients:ingredient_id(
 
 private struct RecipeRow: Decodable {
     let id: UUID?
-    let title: String
+    let name: String
     let description: String?
     let cook_time_min: Int?
     let servings: Int?
@@ -100,7 +100,7 @@ private struct RecipeRow: Decodable {
     func toDomain() -> Recipe {
         Recipe(
             id: id ?? UUID(),
-            title: title,
+            name: name,
             description: description,
             cookTimeMin: cook_time_min,
             servings: servings,
