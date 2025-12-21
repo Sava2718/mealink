@@ -35,20 +35,30 @@ final class SupabaseInventoryRepository: InventoryRepository {
         self.client = client
     }
 
-    func searchIngredients(keyword: String) async throws -> [IngredientSuggestion] {
-        let norm = keyword.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !norm.isEmpty else { return [] }
-        let uid = deviceId.uuidString
-        let response = try await client
-            .from("ingredients")
-            .select("id,name,category,unit,scope,status,owner_user_id,normalized_name")
-            .ilike("normalized_name", pattern: "%\(norm)%")
-            .or("and(scope.eq.master,status.eq.active),and(scope.eq.user,owner_user_id.eq.\(uid),status.in.(active,pending))")
-            .limit(10)
-            .execute()
-        let rows: [IngredientRow] = try decodeResponse(data: response.data)
-        return rows.map { $0.toSuggestion() }
-    }
+func searchIngredients(keyword: String) async throws -> [IngredientSuggestion] {
+    let raw = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !raw.isEmpty else { return [] }
+
+    // user側検索用の uid（匿名含む）
+    let uid = try await ensureAnonymousSession()
+
+    // ひらがな前提の normalized 用（最低限 lowercase）
+    let norm = raw.lowercased()
+
+    let response = try await client
+        .from("ingredients")
+        .select("id,name,category,unit,scope,status,owner_user_id,normalized_name")
+        // 漢字入力救済：name側も部分一致で拾う
+        .or("normalized_name.ilike.\(norm)%,name.ilike.%\(raw)%")
+        // master(active) と user(自分の分) のみに限定
+        .or("and(scope.eq.master,status.eq.active),and(scope.eq.user,owner_user_id.eq.\(uid.uuidString),status.in.(active,pending))")
+        .limit(10)
+        .execute()
+
+    let rows: [IngredientRow] = try decodeResponse(data: response.data)
+    return rows.map { $0.toSuggestion() }
+}
+
 
     func insertUserIngredient(name: String) async throws -> IngredientSuggestion {
         // 確実に user_id を取得（匿名サインイン前提）

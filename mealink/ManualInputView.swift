@@ -9,6 +9,24 @@ struct ManualInputView: View {
         Form {
             Section(header: Text("食材情報")) {
                 TextField("食材名", text: $viewModel.name)
+                    .onChange(of: viewModel.name) { viewModel.onNameChanged($0) }
+                if !viewModel.suggestions.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(viewModel.suggestions) { suggestion in
+                            Button {
+                                viewModel.selectSuggestion(suggestion)
+                            } label: {
+                                HStack {
+                                    Text(suggestion.name)
+                                    Spacer()
+                                    if let unit = suggestion.unit, !unit.isEmpty {
+                                        Text(unit).foregroundColor(.gray)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 TextField("数量 (例: 2)", text: $viewModel.quantity)
                     .keyboardType(.decimalPad)
                 TextField("単位 (例: 個, g)", text: $viewModel.unit)
@@ -48,14 +66,42 @@ struct ManualInputView: View {
 final class ManualInputViewModel: ObservableObject {
     @Published var name: String = ""
     @Published var quantity: String = ""
-    @Published var unit: String = ""
-    @Published var location: String = "冷蔵"
-    @Published var expires: String? = nil
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    @Published var successMessage: String?
+@Published var unit: String = ""
+@Published var location: String = "冷蔵"
+@Published var expires: String? = nil
+@Published var isLoading = false
+@Published var errorMessage: String?
+@Published var successMessage: String?
+    @Published var suggestions: [IngredientSuggestion] = []
 
     private let repository: InventoryRepository? = SupabaseInventoryRepository()
+    private var searchTask: Task<Void, Never>?
+
+    func onNameChanged(_ text: String) {
+        guard let repo = repository else { return }
+        searchTask?.cancel()
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            guard !Task.isCancelled else { return }
+            let keyword = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !keyword.isEmpty else {
+                await MainActor.run { self?.suggestions = [] }
+                return
+            }
+            do {
+                let results = try await repo.searchIngredients(keyword: keyword)
+                await MainActor.run { self?.suggestions = results }
+            } catch {
+                await MainActor.run { self?.errorMessage = error.localizedDescription }
+            }
+        }
+    }
+
+    func selectSuggestion(_ suggestion: IngredientSuggestion) {
+        name = suggestion.name
+        if unit.isEmpty { unit = suggestion.unit ?? "" }
+        suggestions = []
+    }
 
     func submit() async {
         errorMessage = nil
