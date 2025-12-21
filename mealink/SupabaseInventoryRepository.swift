@@ -51,10 +51,28 @@ final class SupabaseInventoryRepository: InventoryRepository {
     }
 
     func insertUserIngredient(name: String) async throws -> IngredientSuggestion {
-        let uid = deviceId.uuidString
+        // 確実に user_id を取得（匿名サインイン前提）
+        let uid = try await ensureAnonymousSession()
+        // まず重複チェック（同一ユーザー & scope=user & normalized_name一致）
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let dupResponse = try await client
+            .from("ingredients")
+            .select("id,name,category,unit,scope,status,owner_user_id,normalized_name")
+            .eq("scope", value: "user")
+            .eq("owner_user_id", value: uid.uuidString) // クエリ条件は文字列で渡す必要がある
+            .eq("normalized_name", value: normalized)
+            .limit(1)
+            .execute()
+
+        let existing: [IngredientRow] = try decodeResponse(data: dupResponse.data)
+        if let first = existing.first {
+            return first.toSuggestion()
+        }
+
+
         let payload = UserIngredientInsert(
             name: name,
-            normalized_name: name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+            normalized_name: normalized,
             scope: "user",
             status: "pending",
             owner_user_id: uid
@@ -105,7 +123,7 @@ private struct IngredientRow: Decodable {
     let unit: String?
     let scope: String?
     let status: String?
-    let owner_user_id: String?
+    let owner_user_id: UUID?
     let normalized_name: String?
 
     func toSuggestion() -> IngredientSuggestion {
@@ -118,7 +136,7 @@ private struct UserIngredientInsert: Encodable {
     let normalized_name: String
     let scope: String
     let status: String
-    let owner_user_id: String
+    let owner_user_id: UUID
 }
 
 private struct InventoryInsertRow: Encodable {
