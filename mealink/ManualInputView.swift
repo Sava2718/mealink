@@ -99,7 +99,8 @@ final class ManualInputViewModel: ObservableObject {
 
     func selectSuggestion(_ suggestion: IngredientSuggestion) {
         name = suggestion.name
-        if unit.isEmpty { unit = suggestion.unit ?? "" }
+        // 選択された食材の単位で上書きする（入力値があっても優先して置き換え）
+        unit = suggestion.unit ?? ""
         suggestions = []
     }
 
