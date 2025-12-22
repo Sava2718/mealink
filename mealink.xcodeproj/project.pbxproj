@@ -38,9 +38,22 @@
 		2CA9A3E82EEADE310024EE74 /* mealinkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = mealinkUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2C5085752EF9916D00FB6F48 /* Exceptions for "mealink" folder in "mealink" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2CA9A3CE2EEADE2E0024EE74 /* mealink */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2CA9A3D12EEADE2E0024EE74 /* mealink */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2C5085752EF9916D00FB6F48 /* Exceptions for "mealink" folder in "mealink" target */,
+			);
 			path = mealink;
 			sourceTree = "<group>";
 		};
@@ -432,6 +445,7 @@
 				DEVELOPMENT_TEAM = 7XH92CGWL9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = mealink/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -464,6 +478,7 @@
 				DEVELOPMENT_TEAM = 7XH92CGWL9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = mealink/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
