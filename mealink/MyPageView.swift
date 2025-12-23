@@ -48,6 +48,7 @@ struct MyPageView: View {
 final class MyPageViewModel: ObservableObject {
     @Published var showAuth: Bool = true
     @Published var displayName: String = "ユーザー"
+    private let authService = AuthService()
 
     func refresh() async {
 #if canImport(Supabase)
@@ -73,16 +74,12 @@ final class MyPageViewModel: ObservableObject {
     }
 
     func logout() async {
-#if canImport(Supabase)
         do {
-            try await SupabaseClients.shared.client?.auth.signOut()
+            try await authService.logout()
         } catch {
-            // ignore logout errors for now
+            // UIには大きく影響しないため、ここではエラーを握りつぶす
         }
         showAuth = true
-#else
-        showAuth = true
-#endif
     }
 
 #if canImport(Supabase)

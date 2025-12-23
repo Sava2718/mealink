@@ -28,7 +28,6 @@ import Supabase
 
 final class SupabaseInventoryRepository: InventoryRepository {
     private let client: SupabaseClient
-    private let deviceId: UUID = LocalUserIDProvider.deviceUUID
 
     init?(client: SupabaseClient? = SupabaseClients.shared.client) {
         guard let client else { return nil }
@@ -39,8 +38,8 @@ func searchIngredients(keyword: String) async throws -> [IngredientSuggestion] {
     let raw = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !raw.isEmpty else { return [] }
 
-    // user側検索用の uid（匿名含む）
-    let uid = try await ensureAnonymousSession()
+    // ログイン済みユーザーの uid（匿名ログインなし）
+    let uid = try requireSessionUserId()
 
     // ひらがな前提の normalized 用（最低限 lowercase）
     let norm = raw.lowercased()
@@ -61,8 +60,8 @@ func searchIngredients(keyword: String) async throws -> [IngredientSuggestion] {
 
 
     func insertUserIngredient(name: String) async throws -> IngredientSuggestion {
-        // 確実に user_id を取得（匿名サインイン前提）
-        let uid = try await ensureAnonymousSession()
+        // 確実に user_id を取得（ログイン必須）
+        let uid = try requireSessionUserId()
         // まず重複チェック（同一ユーザー & scope=user & normalized_name一致）
         let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let dupResponse = try await client
@@ -98,7 +97,7 @@ func searchIngredients(keyword: String) async throws -> [IngredientSuggestion] {
 
     func insertInventory(items: [InventoryInsertRequest]) async throws {
         guard !items.isEmpty else { return }
-        let uid = try await ensureAnonymousSession()
+        let uid = try requireSessionUserId()
         let payloads = items.map {
             InventoryInsertRow(
                 id: $0.inventoryId,
@@ -116,14 +115,17 @@ func searchIngredients(keyword: String) async throws -> [IngredientSuggestion] {
             .execute()
     }
 
-    /// Ensure session exists; sign in anonymously otherwise.
-    private func ensureAnonymousSession() async throws -> UUID {
-        if let uid = client.auth.currentSession?.user.id {
-            return uid
+    /// ログイン必須（Magic Link 前提）。未ログインなら明示的にエラーを返す。
+    fileprivate func requireSessionUserId() throws -> UUID {
+        guard let uid = client.auth.currentSession?.user.id else {
+            throw AuthRequiredError()
         }
-        let session = try await client.auth.signInAnonymously()
-        return session.user.id
+        return uid
     }
+}
+
+struct AuthRequiredError: LocalizedError {
+    var errorDescription: String? { "ログインが必要です" }
 }
 
 private struct IngredientRow: Decodable {

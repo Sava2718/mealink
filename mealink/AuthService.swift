@@ -24,9 +24,17 @@ final class AuthService {
             redirectTo: URL(string: "mealink://login-callback")
         )
     }
+
+    /// ログアウト（セッション破棄）
+    func logout() async throws {
+        guard let client else { throw AuthError.clientUnavailable }
+        try await client.auth.signOut()
+        NotificationCenter.default.post(name: .authStateDidChange, object: nil)
+    }
 #else
     private let client: Any? = nil
     init() {}
     func sendMagicLink(email: String) async throws { throw AuthError.unsupported }
+    func logout() async throws { throw AuthError.unsupported }
 #endif
 }
