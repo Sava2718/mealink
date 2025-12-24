@@ -3,7 +3,7 @@ import SwiftUI
 struct TodayMenuView: View {
     let dataProvider: any DataProvider
 
-    @State private var recipes: [Recipe] = []
+    @State private var recipes: [DBRecipeSummaryRow] = []
     @State private var selectedCuisine: String = "すべて"
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -56,7 +56,8 @@ struct TodayMenuView: View {
         isLoading = true
         errorMessage = nil
         do {
-            recipes = try await dataProvider.fetchRecipes()
+            recipes = try await dataProvider.fetchRecipeSummary()
+            print("[TodayMenu] fetched summaries count:", recipes.count)
             if !availableCuisines.contains(selectedCuisine) { selectedCuisine = "すべて" }
             isLoading = false
         } catch {
@@ -71,59 +72,49 @@ struct TodayMenuView: View {
         return ["すべて"] + unique
     }
 
-    private var filteredRecipes: [Recipe] {
+    private var filteredRecipes: [DBRecipeSummaryRow] {
         guard selectedCuisine != "すべて" else { return recipes }
         return recipes.filter { $0.cuisine == selectedCuisine }
     }
 }
 
 struct RecipeCard: View {
-    let recipe: Recipe
+    let recipe: DBRecipeSummaryRow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Rectangle()
-                .fill(LinearGradient(colors: [Color.orange.opacity(0.6), Color.orange.opacity(0.3)],
-                                     startPoint: .topLeading,
-                                     endPoint: .bottomTrailing))
+            if let urlString = recipe.photo_url, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().scaledToFill()
+                    case .failure(_):
+                        placeholder
+                    case .empty:
+                        ZStack { placeholder; ProgressView() }
+                    @unknown default:
+                        placeholder
+                    }
+                }
                 .frame(height: 200)
-                .overlay(Image(systemName: "fork.knife.circle.fill").font(.system(size: 64)).foregroundStyle(.white))
+                .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            } else {
+                placeholder
+                    .frame(height: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(recipe.name)
+                Text(recipe.recipe_name)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Color(hex: "#3E4B50"))
 
-                if let desc = recipe.description {
-                    Text(desc)
-                        .font(.system(size: 14))
-                        .foregroundStyle(.gray)
-                }
-
                 HStack(spacing: 8) {
-                    if let min = recipe.cookTimeMin { TagView(text: "約\(min)分") }
+                    if let min = recipe.cook_time { TagView(text: "約\(min)分") }
                     if let s = recipe.servings { TagView(text: "\(s)人前") }
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(recipe.ingredients) { ing in
-                        HStack {
-                            Text(ing.name)
-                                .font(.system(size: 16, weight: .semibold))
-                            Spacer()
-                            HStack(spacing: 6) {
-                                Text(ing.amount)
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(ing.isAlert ? Color(hex: "#E86F71") : Color(hex: "#68C29E"))
-                                if ing.isAlert {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundStyle(Color(hex: "#E86F71"))
-                                }
-                            }
-                        }
-                    }
+                    TagView(text: recipe.can_cook ? "作れる" : "不足あり", color: recipe.can_cook ? Color(hex: "#68C29E") : Color(hex: "#E86F71"))
+                    TagView(text: "不足 \(recipe.shortage_items_count)")
                 }
             }
             .padding(16)
@@ -131,6 +122,14 @@ struct RecipeCard: View {
         .background(.white)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
+    }
+
+    private var placeholder: some View {
+        Rectangle()
+            .fill(LinearGradient(colors: [Color.orange.opacity(0.6), Color.orange.opacity(0.3)],
+                                 startPoint: .topLeading,
+                                 endPoint: .bottomTrailing))
+            .overlay(Image(systemName: "fork.knife.circle.fill").font(.system(size: 64)).foregroundStyle(.white))
     }
 }
 

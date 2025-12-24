@@ -19,12 +19,15 @@ struct CategoryChip: View {
 
 struct TagView: View {
     let text: String
+    var color: Color? = nil
+
     var body: some View {
         Text(text)
             .font(.system(size: 12, weight: .semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color(hex: "#F5E4CF"))
+            .background((color ?? Color(hex: "#F5E4CF")).opacity(0.18))
+            .foregroundStyle(color ?? Color(hex: "#3E4B50"))
             .clipShape(Capsule())
     }
 }

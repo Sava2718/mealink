@@ -1,27 +1,47 @@
 import Foundation
 
 protocol DataProvider {
-    func fetchRecipes() async throws -> [Recipe]
+    func fetchRecipeSummary() async throws -> [DBRecipeSummaryRow]
     func fetchInventory() async throws -> [InventoryItem]
+}
+
+struct DBRecipeSummaryRow: Identifiable, Decodable {
+    let recipe_id: UUID
+    let recipe_name: String
+    let cuisine: String?
+    let cook_time: Int?
+    let servings: Int?
+    let photo_url: String?
+    let shortage_items_count: Int
+    let can_cook: Bool
+
+    var id: UUID { recipe_id }
+
+    enum CodingKeys: String, CodingKey {
+        case recipe_id
+        case recipe_name
+        case cuisine
+        case cook_time
+        case servings
+        case photo_url
+        case shortage_items_count
+        case can_cook
+    }
 }
 
 /// Mock implementation to unblock UI until DB is wired.
 final class MockDataProvider: DataProvider {
-    func fetchRecipes() async throws -> [Recipe] {
+    func fetchRecipeSummary() async throws -> [DBRecipeSummaryRow] {
         [
-            Recipe(
-                name: "鶏肉と野菜のパステルグリル",
-                description: "彩り野菜と鶏肉をオーブンでじっくり焼いた一品。",
-                cookTimeMin: 15,
-                servings: 2,
+            DBRecipeSummaryRow(
+                recipe_id: UUID(),
+                recipe_name: "鶏肉と野菜のパステルグリル",
                 cuisine: "洋食",
-                ingredients: [
-                    RecipeIngredient(name: "鶏肉", amount: "200g"),
-                    RecipeIngredient(name: "ズッキーニ", amount: "1本 不足", isAlert: true),
-                    RecipeIngredient(name: "パプリカ", amount: "1/2個"),
-                    RecipeIngredient(name: "ピーマン", amount: "1個"),
-                ],
-                imageURL: nil
+                cook_time: 15,
+                servings: 2,
+                photo_url: nil,
+                shortage_items_count: 1,
+                can_cook: false
             )
         ]
     }
@@ -46,22 +66,22 @@ final class SupabaseDataProvider: DataProvider {
         self.client = client
     }
 
-    func fetchRecipes() async throws -> [Recipe] {
-        let query = """
-id,
-name,
-description,
-cook_time_min,
-servings,
- cuisine,
-created_at
-"""
+    func fetchRecipeSummary() async throws -> [DBRecipeSummaryRow] {
         let response = try await client
-            .from("recipes")
-            .select(query)
+            .rpc("rpc_recipe_summary")
             .execute()
-        let rows: [RecipeRow] = try decodeResponse(data: response.data)
-        return rows.map { $0.toDomain() }
+
+        let raw = String(data: response.data ?? Data(), encoding: .utf8)
+        if let raw { print("[RecipeSummary] raw json:", raw) }
+
+        do {
+            let rows: [DBRecipeSummaryRow] = try decodeResponse(data: response.data)
+            print("[RecipeSummary] count:", rows.count)
+            return rows
+        } catch {
+            if let raw { print("[RecipeSummary] decode error raw:", raw) }
+            throw error
+        }
     }
 
     func fetchInventory() async throws -> [InventoryItem] {
@@ -85,28 +105,6 @@ ingredients:ingredient_id(
             .execute()
         let rows: [InventoryRow] = try decodeResponse(data: response.data)
         return rows.map { $0.toDomain() }
-    }
-}
-
-private struct RecipeRow: Decodable {
-    let id: UUID?
-    let name: String
-    let description: String?
-    let cook_time_min: Int?
-    let servings: Int?
-    let cuisine: String?
-    let created_at: String?
-
-    func toDomain() -> Recipe {
-        Recipe(
-            id: id ?? UUID(),
-            name: name,
-            description: description,
-            cookTimeMin: cook_time_min,
-            servings: servings,
-            cuisine: cuisine,
-            ingredients: [] // ingredients will be filled later when schema available
-        )
     }
 }
 
