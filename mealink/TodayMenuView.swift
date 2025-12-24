@@ -9,47 +9,55 @@ struct TodayMenuView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("今日の献立")
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundStyle(Color(hex: "#3E4B50"))
-                    .padding(.top, 8)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("今日の献立")
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(Color(hex: "#3E4B50"))
+                        .padding(.top, 8)
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(availableCuisines, id: \.self) { cat in
-                            CategoryChip(label: cat, selected: cat == selectedCuisine)
-                                .onTapGesture { selectedCuisine = cat }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(availableCuisines, id: \.self) { cat in
+                                CategoryChip(label: cat, selected: cat == selectedCuisine)
+                                    .onTapGesture { selectedCuisine = cat }
+                            }
                         }
                     }
-                }
 
-                if isLoading {
-                    ProgressView().frame(maxWidth: .infinity, alignment: .center)
-                } else if let message = errorMessage {
-                    ErrorCard(message: message, retry: load)
-                } else {
-                    ForEach(filteredRecipes) { recipe in
-                        RecipeCard(recipe: recipe)
+                    if isLoading {
+                        ProgressView().frame(maxWidth: .infinity, alignment: .center)
+                    } else if let message = errorMessage {
+                        ErrorCard(message: message, retry: load)
+                    } else {
+                        ForEach(filteredRecipes) { recipe in
+                            NavigationLink(value: recipe) {
+                                RecipeCard(recipe: recipe)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    Button(action: {}) {
+                        Text("これにする")
+                            .font(.system(size: 18, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .foregroundStyle(.white)
+                            .background(Color(hex: "#F28245"))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                 }
-
-                Button(action: {}) {
-                    Text("これにする")
-                        .font(.system(size: 18, weight: .bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(.white)
-                        .background(Color(hex: "#F28245"))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal, 18)
-            .padding(.bottom, 24)
+            .background(Color(hex: "#FBE4CC"))
+            .task { await load() }
+            .navigationDestination(for: DBRecipeSummaryRow.self) { recipe in
+                RecipeDetailView(recipeId: recipe.recipe_id)
+            }
         }
-        .background(Color(hex: "#FBE4CC"))
-        .task { await load() }
     }
 
     private func load() async {

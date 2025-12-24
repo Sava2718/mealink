@@ -2,10 +2,11 @@ import Foundation
 
 protocol DataProvider {
     func fetchRecipeSummary() async throws -> [DBRecipeSummaryRow]
+    func fetchRecipeRequirements(recipeId: UUID) async throws -> [DBRecipeRequirementRow]
     func fetchInventory() async throws -> [InventoryItem]
 }
 
-struct DBRecipeSummaryRow: Identifiable, Decodable {
+struct DBRecipeSummaryRow: Identifiable, Decodable, Hashable {
     let recipe_id: UUID
     let recipe_name: String
     let cuisine: String?
@@ -29,6 +30,29 @@ struct DBRecipeSummaryRow: Identifiable, Decodable {
     }
 }
 
+struct DBRecipeRequirementRow: Identifiable, Decodable, Hashable {
+    // JSONに id は無いので計算プロパティで一意キーを生成
+    let ingredientName: String
+    let requiredAmount: Int?
+    let requiredUnit: String
+    let inStockAmount: Double?
+    let shortageAmount: Double?
+    let recipeId: UUID?
+    let recipeName: String?
+
+    var id: String { "\(ingredientName)|\(requiredUnit)" }
+
+    enum CodingKeys: String, CodingKey {
+        case ingredientName = "ingredient_name"
+        case requiredAmount = "required_amount"
+        case requiredUnit = "required_unit"
+        case inStockAmount = "in_stock_amount"
+        case shortageAmount = "shortage_amount"
+        case recipeId = "recipe_id"
+        case recipeName = "recipe_name"
+    }
+}
+
 /// Mock implementation to unblock UI until DB is wired.
 final class MockDataProvider: DataProvider {
     func fetchRecipeSummary() async throws -> [DBRecipeSummaryRow] {
@@ -42,6 +66,20 @@ final class MockDataProvider: DataProvider {
                 photo_url: nil,
                 shortage_items_count: 1,
                 can_cook: false
+            )
+        ]
+    }
+
+    func fetchRecipeRequirements(recipeId: UUID) async throws -> [DBRecipeRequirementRow] {
+        [
+            DBRecipeRequirementRow(
+                ingredientName: "にんじん",
+                requiredAmount: 2,
+                requiredUnit: "本",
+                inStockAmount: 1,
+                shortageAmount: 1,
+                recipeId: recipeId,
+                recipeName: "サンプル"
             )
         ]
     }
@@ -80,6 +118,24 @@ final class SupabaseDataProvider: DataProvider {
             return rows
         } catch {
             if let raw { print("[RecipeSummary] decode error raw:", raw) }
+            throw error
+        }
+    }
+
+    func fetchRecipeRequirements(recipeId: UUID) async throws -> [DBRecipeRequirementRow] {
+        let response = try await client
+            .rpc("rpc_recipe_requirements", params: ["p_recipe_id": recipeId.uuidString])
+            .execute()
+
+        let raw = String(data: response.data ?? Data(), encoding: .utf8)
+        if let raw { print("[RecipeRequirements] raw json:", raw) }
+
+        do {
+            let rows: [DBRecipeRequirementRow] = try decodeResponse(data: response.data)
+            print("[RecipeRequirements] count:", rows.count)
+            return rows
+        } catch {
+            if let raw { print("[RecipeRequirements] decode error raw:", raw) }
             throw error
         }
     }
