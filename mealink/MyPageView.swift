@@ -6,6 +6,7 @@ import Supabase
 
 struct MyPageView: View {
     @StateObject private var viewModel = MyPageViewModel()
+    @State private var showSettings = false
 
     var body: some View {
         NavigationStack {
@@ -13,30 +14,28 @@ struct MyPageView: View {
                 if viewModel.showAuth {
                     AuthView()
                 } else {
-                    List {
-                        Section {
-                            HStack {
-                                Circle().fill(Color(hex: "#BCEFD6")).frame(width: 48, height: 48)
-                                    .overlay(Image(systemName: "person.fill").foregroundStyle(.white))
-                                VStack(alignment: .leading) {
-                                    Text(viewModel.displayName).font(.headline)
-                                    Text("匿名ではありません").font(.subheadline).foregroundStyle(.gray)
-                                }
-                            }
-                        }
-                        Section {
-                            Label("通知設定", systemImage: "bell")
-                            Label("プライバシー設定", systemImage: "lock")
-                            Button(role: .destructive) {
-                                Task { await viewModel.logout() }
-                            } label: {
-                                Label("ログアウト", systemImage: "rectangle.portrait.and.arrow.forward")
-                            }
+                    HealthLogView()
+                }
+            }
+            .navigationTitle("マイページ")
+            .toolbar {
+                if !viewModel.showAuth {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "line.3.horizontal.circle")
                         }
                     }
                 }
             }
-            .navigationTitle("マイページ")
+            .background(
+                NavigationLink(
+                    destination: MyPageSettingsView(viewModel: viewModel),
+                    isActive: $showSettings
+                ) { EmptyView() }
+                .hidden()
+            )
             .task {
                 await viewModel.refresh()
             }
@@ -90,4 +89,34 @@ final class MyPageViewModel: ObservableObject {
         return nil
     }
 #endif
+}
+
+/// これまでのマイページ設定リストを右上メニューからプッシュ表示するビュー
+struct MyPageSettingsView: View {
+    @ObservedObject var viewModel: MyPageViewModel
+
+    var body: some View {
+        List {
+            Section {
+                HStack {
+                    Circle().fill(Color(hex: "#BCEFD6")).frame(width: 48, height: 48)
+                        .overlay(Image(systemName: "person.fill").foregroundStyle(.white))
+                    VStack(alignment: .leading) {
+                        Text(viewModel.displayName).font(.headline)
+                        Text("匿名ではありません").font(.subheadline).foregroundStyle(.gray)
+                    }
+                }
+            }
+            Section {
+                Label("通知設定", systemImage: "bell")
+                Label("プライバシー設定", systemImage: "lock")
+                Button(role: .destructive) {
+                    Task { await viewModel.logout() }
+                } label: {
+                    Label("ログアウト", systemImage: "rectangle.portrait.and.arrow.forward")
+                }
+            }
+        }
+        .navigationTitle("設定")
+    }
 }

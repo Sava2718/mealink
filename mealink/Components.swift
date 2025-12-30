@@ -11,8 +11,8 @@ struct CategoryChip: View {
             .font(.system(size: 14, weight: .semibold))
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(selected ? Color.white : Color.white.opacity(0.5))
-            .foregroundStyle(Color(hex: "#3E4B50").opacity(selected ? 1 : 0.6))
+            .background(selected ? Color.white : Color.white.opacity(0.7))
+            .foregroundStyle(selected ? Color.black : Color.black.opacity(0.7))
             .clipShape(Capsule())
     }
 }
@@ -26,8 +26,8 @@ struct TagView: View {
             .font(.system(size: 12, weight: .semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background((color ?? Color(hex: "#F5E4CF")).opacity(0.18))
-            .foregroundStyle(color ?? Color(hex: "#3E4B50"))
+            .background((color ?? Color.white).opacity(0.8))
+            .foregroundStyle(color ?? Color.black)
             .clipShape(Capsule())
     }
 }

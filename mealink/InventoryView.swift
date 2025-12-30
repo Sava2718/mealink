@@ -9,12 +9,12 @@ struct InventoryView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "#DFF3F7").ignoresSafeArea()
+            Color(.systemGray6).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("冷蔵庫の中身")
                         .font(.system(size: 28, weight: .heavy))
-                        .foregroundStyle(Color(hex: "#3E4B50"))
+                        .foregroundStyle(.black)
                         .padding(.top, 8)
 
                     if isLoading {
@@ -26,10 +26,11 @@ struct InventoryView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding()
                     } else {
-                        ForEach(groupedByCategory.keys.sorted(), id: \.self) { key in
-                            if let list = groupedByCategory[key] {
+                        ForEach(groupedByLocation.keys.sorted(), id: \.self) { key in
+                            if let list = groupedByLocation[key] {
                                 Text(key)
                                     .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(.black)
                                 ForEach(list) { item in
                                     InventoryCardView(item: item)
                                 }
@@ -47,7 +48,7 @@ struct InventoryView: View {
                         .font(.system(size: 14, weight: .bold))
                         .padding(.vertical, 10)
                         .padding(.horizontal, 14)
-                        .background(Color(hex: "#56ACC7"))
+                        .background(Color.blue.opacity(0.85))
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .shadow(radius: 6)
@@ -71,7 +72,10 @@ struct InventoryView: View {
         }
     }
 
-    private var groupedByCategory: [String: [InventoryItem]] {
-        Dictionary(grouping: items, by: { $0.category })
+    private var groupedByLocation: [String: [InventoryItem]] {
+        Dictionary(grouping: items, by: { item in
+            let loc = item.location?.isEmpty == false ? item.location! : "未設定"
+            return loc
+        })
     }
 }

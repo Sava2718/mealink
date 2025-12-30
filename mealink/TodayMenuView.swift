@@ -5,6 +5,7 @@ struct TodayMenuView: View {
 
     @State private var recipes: [DBRecipeSummaryRow] = []
     @State private var selectedCuisine: String = "すべて"
+    @State private var searchText: String = ""
     @State private var isLoading = true
     @State private var errorMessage: String?
 
@@ -12,11 +13,6 @@ struct TodayMenuView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("今日の献立")
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundStyle(Color(hex: "#3E4B50"))
-                        .padding(.top, 8)
-
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(availableCuisines, id: \.self) { cat in
@@ -31,32 +27,27 @@ struct TodayMenuView: View {
                     } else if let message = errorMessage {
                         ErrorCard(message: message, retry: load)
                     } else {
-                        ForEach(filteredRecipes) { recipe in
+                        let list = filteredRecipes
+                        if list.isEmpty {
+                            Text("該当するレシピがありません").foregroundColor(.black.opacity(0.6))
+                        }
+                        ForEach(list) { recipe in
                             NavigationLink(value: recipe) {
                                 RecipeCard(recipe: recipe)
                             }
                             .buttonStyle(.plain)
                         }
                     }
-
-                    Button(action: {}) {
-                        Text("これにする")
-                            .font(.system(size: 18, weight: .bold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .foregroundStyle(.white)
-                            .background(Color(hex: "#F28245"))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
                 }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 24)
             }
-            .background(Color(hex: "#FBE4CC"))
+            .background(Color(.systemGray6))
             .task { await load() }
             .navigationDestination(for: DBRecipeSummaryRow.self) { recipe in
                 RecipeDetailView(recipeId: recipe.recipe_id)
             }
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "レシピ名で検索")
         }
     }
 
@@ -75,14 +66,25 @@ struct TodayMenuView: View {
     }
 
     private var availableCuisines: [String] {
+        // 代表的なカテゴリを常に表示しつつ、DBにあるものも併合
+        let base = ["すべて", "和食", "洋食", "中華", "エスニック", "その他"]
         let cuisines = recipes.compactMap { $0.cuisine?.isEmpty == false ? $0.cuisine : nil }
-        let unique = Array(Set(cuisines)).sorted()
-        return ["すべて"] + unique
+        let unique = Array(Set(cuisines + base)).sorted()
+        // 先頭は必ず「すべて」
+        return ["すべて"] + unique.filter { $0 != "すべて" }
     }
 
     private var filteredRecipes: [DBRecipeSummaryRow] {
-        guard selectedCuisine != "すべて" else { return recipes }
-        return recipes.filter { $0.cuisine == selectedCuisine }
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base: [DBRecipeSummaryRow]
+        if trimmed.isEmpty {
+            base = recipes
+        } else {
+            base = recipes.filter { $0.recipe_name.localizedCaseInsensitiveContains(trimmed) }
+        }
+
+        guard selectedCuisine != "すべて" else { return base }
+        return base.filter { $0.cuisine == selectedCuisine }
     }
 }
 
@@ -116,7 +118,7 @@ struct RecipeCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(recipe.recipe_name)
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Color(hex: "#3E4B50"))
+                    .foregroundStyle(.black)
 
                 HStack(spacing: 8) {
                     if let min = recipe.cook_time { TagView(text: "約\(min)分") }
@@ -129,12 +131,12 @@ struct RecipeCard: View {
         }
         .background(.white)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 6)
     }
 
     private var placeholder: some View {
         Rectangle()
-            .fill(LinearGradient(colors: [Color.orange.opacity(0.6), Color.orange.opacity(0.3)],
+            .fill(LinearGradient(colors: [Color.orange.opacity(0.5), Color.orange.opacity(0.2)],
                                  startPoint: .topLeading,
                                  endPoint: .bottomTrailing))
             .overlay(Image(systemName: "fork.knife.circle.fill").font(.system(size: 64)).foregroundStyle(.white))
